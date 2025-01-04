@@ -5,7 +5,9 @@
 struct Fibonacci {
     int numbers[11];
     // TODO: 修改方法签名和实现，使测试通过
-    int get(int i) {
+   constexpr int get(int i) const {  // 声明为 constexpr 并加上 const 限定符
+        ASSERT(i >= 0 && i < 11, "Index out of bounds");  // 确保索引在有效范围内
+        return numbers[i];
     }
 };
 
