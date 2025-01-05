@@ -9,7 +9,11 @@ struct Tensor4D {
 
     Tensor4D(unsigned int const shape_[4], T const *data_) {
         unsigned int size = 1;
-        // TODO: 填入正确的 shape 并计算 size
+        // 复制形状并计算总大小
+        for (int i = 0; i < 4; ++i) {
+            shape[i] = shape_[i];
+            size *= shape[i];
+        }
         data = new T[size];
         std::memcpy(data, data_, size * sizeof(T));
     }
@@ -27,7 +31,41 @@ struct Tensor4D {
     // 例如，`this` 形状为 `[1, 2, 3, 4]`，`others` 形状为 `[1, 2, 1, 4]`，
     // 则 `this` 与 `others` 相加时，3 个形状为 `[1, 2, 1, 4]` 的子张量各自与 `others` 对应项相加。
     Tensor4D &operator+=(Tensor4D const &others) {
-        // TODO: 实现单向广播的加法
+        // 计算每个维度的步长
+        unsigned int stride[4] = {1, 1, 1, 1};
+        // 从最后一个维度开始计算累积步长
+        for (int i = 2; i >= 0; --i) {
+            stride[i] = stride[i + 1] * others.shape[i + 1];
+        }
+        
+        // 检查形状并调整步长（广播）
+        for (int i = 0; i < 4; ++i) {
+            if (others.shape[i] != 1 && others.shape[i] != shape[i]) {
+                throw std::runtime_error("Invalid broadcast shape");
+            }
+            // 如果是广播维度，该维度的步长设为0
+            if (others.shape[i] == 1) {
+                stride[i] = 0;
+            }
+        }
+
+        // 执行广播加法
+        unsigned int total_size = shape[0] * shape[1] * shape[2] * shape[3];
+        for (unsigned int i = 0; i < total_size; ++i) {
+            // 计算对应的 others 索引
+            unsigned int others_idx = 0;
+            unsigned int tmp = i;
+            for (int dim = 0; dim < 4; ++dim) {
+                unsigned int dim_size = 1;
+                for (int j = dim + 1; j < 4; ++j) {
+                    dim_size *= shape[j];
+                }
+                unsigned int dim_idx = tmp / dim_size;
+                tmp %= dim_size;
+                others_idx += dim_idx * stride[dim];
+            }
+            data[i] += others.data[others_idx];
+        }
         return *this;
     }
 };
